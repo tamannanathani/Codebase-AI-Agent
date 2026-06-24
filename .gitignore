@@ -7,4 +7,5 @@ dist/
 
 # Ignore all files with a specific extension (using a wildcard)
 *.log
-*.tmp
+*.tmpnode_modules/ 
+.env 
