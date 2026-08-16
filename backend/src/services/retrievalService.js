@@ -1,3 +1,4 @@
+import { findAllRelatedFiles } from "./graphService.js";
 export const normalizeFileName = (name) => {
   if (!name) return "";
   return name
@@ -26,22 +27,66 @@ export const findFilesByType = (
 };
 
 export const getRelatedFiles = (files, graph, fileName) => {
-  const needle = normalizeFileName(fileName);
-
-  const graphKey = Object.keys(graph).find(
-    (k) => normalizeFileName(k) === needle
-  );
-
-  const relatedNames = graphKey ? graph[graphKey] : [];
+  const relatedNames = findAllRelatedFiles(graph, fileName);
 
   return relatedNames
-    .map((name) => {
-      const normalized = normalizeFileName(name);
-
-      return files.find((file) => {
-        const fileNorm = normalizeFileName(file.originalName);
-        return fileNorm === normalized;
-      });
-    })
+    .map((name) =>
+      files.find(
+        (file) =>
+          normalizeFileName(file.originalName) ===
+          normalizeFileName(name)
+      )
+    )
     .filter(Boolean);
+};
+
+export const findFilesByKeywords = (files, keywords) => {
+  const results = [];
+
+  for (const file of files) {
+    const text = `
+      ${file.originalName}
+      ${file.contentPreview || ""}
+      ${(file.imports || []).join(" ")}
+    `.toLowerCase();
+
+    const matched = keywords.some((keyword) =>
+      text.includes(keyword.toLowerCase())
+    );
+
+    if (matched) {
+      results.push(file);
+    }
+  }
+
+  return results;
+};
+export const extractKeywords = (query) => {
+  const stopWords = new Set([
+    "how",
+    "does",
+    "do",
+    "what",
+    "is",
+    "are",
+    "the",
+    "a",
+    "an",
+    "in",
+    "of",
+    "to",
+    "work",
+    "works",
+    "explain",
+    "show",
+    "tell",
+    "me",
+    "about"
+  ]);
+
+  return query
+    .toLowerCase()
+    .replace(/[?!.,]/g, "")
+    .split(/\s+/)
+    .filter(word => word.length > 2 && !stopWords.has(word));
 };

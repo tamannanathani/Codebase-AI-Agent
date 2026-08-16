@@ -48,32 +48,62 @@ export const findDependents = (
 
 //dfs strategy: maintain set() of visited files and startFile[] to track files to explore
 
-export const findAllRelatedFiles = (
-  graph,
-  startFile
-) => {
+export const findAllRelatedFiles = (graph, startFile) => {
   const visited = new Set();
   const stack = [normalizeGraphKey(startFile)];
-  const relatedFiles = [];
 
   while (stack.length > 0) {
-    const currentFile = stack.pop();
+    const current = stack.pop();
 
-    if (visited.has(currentFile)) {
-      continue;
-    }
+    if (visited.has(current)) continue;
 
-    visited.add(currentFile);
-    relatedFiles.push(currentFile);
+    visited.add(current);
 
-    const dependencies =
-      graph[currentFile] || [];
+    // Forward dependencies
+    const dependencies = graph[current] || [];
 
     for (const dependency of dependencies) {
-      stack.push(dependency);
+      if (!visited.has(dependency)) {
+        stack.push(dependency);
+      }
+    }
+
+    // Reverse dependencies (dependents)
+    const dependents = findDependents(graph, current);
+
+    for (const dependent of dependents) {
+      if (!visited.has(dependent)) {
+        stack.push(dependent);
+      }
     }
   }
 
-  return relatedFiles;
+  return [...visited];
 };
+export const getImpactAnalysis = (graph, targetFile) => {
+  const directDependents = findDependents(graph, targetFile);
 
+  const indirectDependents = [];
+
+  const visited = new Set(directDependents);
+
+  for (const file of directDependents) {
+    const secondLevel = findDependents(graph, file);
+
+    for (const dependent of secondLevel) {
+      if (!visited.has(dependent)) {
+        visited.add(dependent);
+        indirectDependents.push(dependent);
+      }
+    }
+  }
+
+  return {
+    target: targetFile,
+    directDependents,
+    indirectDependents,
+    totalAffected:
+      directDependents.length +
+      indirectDependents.length,
+  };
+};

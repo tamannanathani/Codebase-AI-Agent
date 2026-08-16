@@ -1,4 +1,5 @@
-import { buildContext } from "../services/contextService.js";
+import { planQuery } from "../services/plannerService.js";
+import { executePlan } from "../services/executorService.js";
 import { buildPrompt } from "../services/promptService.js";
 import { generateResponse } from "../services/llmService.js";
 import { getCodebase } from "../store/codebaseStore.js";
@@ -10,29 +11,44 @@ export const askCodebase = async (req, res) => {
     const { query} = req.body;
 
     const { files, graph } = getCodebase();
-    const context = buildContext(query, files, graph);
+    console.log(
+  "FILES IN STORE:",
+  files.map(file => file.originalName)
+);
 
-    console.log("CONTEXT:", context);
+console.log(
+  "GRAPH KEYS:",
+  Object.keys(graph)
+);
+   const plan = await planQuery(query);
 
-    if (context.error) {
-      const messages = {
-        "No file found in query": `I couldn't find a specific file in your question. Please include a filename (e.g., "app.js") in your query.`,
-        "File not found in codebase": `The file you referenced wasn't found in the codebase.`
-      };
-      return res.json({
-        success: false,
-        error: context.error,
-        answer: messages[context.error] || context.error
-      });
-    }
+console.log("PLAN:");
+console.log(plan);
 
-    const prompt = buildPrompt(context);
+const context = executePlan(
+  plan,
+  files,
+  graph,
+  query
+);
+
+console.log("CONTEXT:");
+console.log(context);
+
+if (context.error) {
+  return res.status(400).json({
+    success: false,
+    error: context.error,
+  });
+}
+
+    const prompt = buildPrompt(query, context);
 
     console.log("PROMPT BUILT");
 
     const answer = await generateResponse(prompt);
 
-    res.json({ success: true, answer });
+    res.json({ success: true, plan, answer });
   } catch (err) {
     console.error("FULL ERROR:", err); // 🔥 IMPORTANT
     res.status(500).json({
