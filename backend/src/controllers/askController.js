@@ -1,16 +1,31 @@
-import { planQuery } from "../services/plannerService.js";
-import { executePlan } from "../services/executorService.js";
+import { buildContext } from "../services/contextService.js";
 import { buildPrompt } from "../services/promptService.js";
 import { generateResponse } from "../services/llmService.js";
-import { getCodebase } from "../store/codebaseStore.js";
+import { planQuery } from "../services/plannerService.js";
+import { executePlan } from "../services/executorService.js";
+import { getCodebaseFromDB } from "../services/codebaseService.js";
 
 export const askCodebase = async (req, res) => {
   try {
     console.log("REQUEST HIT");
 
-    const { query} = req.body;
+    const { query, codebaseId } = req.body;
 
-    const { files, graph } = getCodebase();
+    if (!query) {
+      return res.status(400).json({
+        success: false,
+        error: "Query is required",
+      });
+    }
+
+    if (!codebaseId) {
+      return res.status(400).json({
+        success: false,
+        error: "codebaseId is required",
+      });
+    }
+
+    const { files, graph } = await getCodebaseFromDB(codebaseId);
     console.log(
   "FILES IN STORE:",
   files.map(file => file.originalName)

@@ -1,12 +1,19 @@
 // src/server.js
 // Server setup and configuration
 import dotenv from "dotenv";
-import app from "./app.js";
-
 dotenv.config();
+
+import app from "./app.js";
+import { connectMongoDB } from "./config/mongodb.js";
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+const startServer = async () => {
+  await connectMongoDB();
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+};
+
+startServer();
