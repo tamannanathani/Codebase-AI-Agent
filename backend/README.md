@@ -6,3 +6,5 @@ Meaning:
 simple rules
 pattern matching
 lightweight intelligence
+
+i am also implementing traditional rag implementation to strenghten its core understanding

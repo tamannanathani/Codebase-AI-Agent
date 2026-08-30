@@ -1,51 +1,58 @@
-// src/controllers/uploadController.js
-// Handle upload logic here
-// export const uploadFiles = (req, res) => {
-//   try {
-//     const uploadedFiles = req.files.map((file) => {
-//       return file.filename;
-//     });
-
-//     res.status(200).json({
-//       message: "Files uploaded successfully",
-//       files: uploadedFiles,
-//     });
-//   } catch (error) {
-//     res.status(500).json({
-//       error: error.message,
-//     });
-//   }
-// };  //returned the file names only, but we need to return the file paths as well for previewing
- 
-
-//Controller
-// → call fileService
-// → fileService reads files
-// → structured data returned
-
 import { readUploadedFiles } from "../services/fileService.js";
 import { buildDependencyGraph } from "../services/graphService.js";
-import { setCodebase } from "../store/codebaseStore.js";
+import { saveCodebase } from "../services/databaseServices.js";
 
-export const uploadFiles = (req, res) => {
+export const uploadFiles = async (req, res) => {
   try {
-    const { processedFiles, ignoredFiles } = readUploadedFiles(req.files);
+    console.log("UPLOAD REQUEST HIT");
 
-    const dependencyGraph = buildDependencyGraph(processedFiles);
+    const { processedFiles, ignoredFiles } =
+      readUploadedFiles(req.files);
 
-    // 🔥 ONLY ONE SOURCE OF TRUTH
-    setCodebase(processedFiles, dependencyGraph);
+    console.log(
+      "PROCESSED FILES:",
+      processedFiles.map((file) => file.originalName)
+    );
+
+    const dependencyGraph =
+      buildDependencyGraph(processedFiles);
+
+    const codebaseName =
+      req.body.name || "Uploaded Codebase";
+
+    const codebase = await saveCodebase(
+      codebaseName,
+      processedFiles,
+      dependencyGraph
+    );
+
+    console.log(
+      "CODEBASE CREATED:",
+      codebase._id.toString()
+    );
 
     res.status(200).json({
-      message: "Files uploaded and processed successfully",
+      success: true,
+      message: "Files uploaded and saved successfully",
+
+      codebaseId: codebase._id,
+
+      codebaseName: codebase.name,
+
       totalFiles: processedFiles.length,
+
       files: processedFiles,
+
       ignoredFiles,
+
       dependencyGraph,
     });
 
   } catch (error) {
+    console.error("UPLOAD ERROR:", error);
+
     res.status(500).json({
+      success: false,
       error: error.message,
     });
   }
